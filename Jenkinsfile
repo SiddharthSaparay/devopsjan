@@ -8,7 +8,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                echo "Pulling from GITHUB repository"
-               git branch: 'main', credentialsId: 'mygithubcred', url: 'https://github.com/chntraining/devopsjan.git'
+               git branch: 'main', credentialsId: 'mygithub', url: 'https://github.com/SiddharthSaparay/devopsjan.git'
             }
         }
          stage('Test the Project') {
@@ -29,24 +29,39 @@ pipeline {
                bat 'mvn clean package -DskipTests' 
             }
         }
-		stage('Test The Appln') {
-			steps {
-				echo "Testing my JAVA project"
-			}
-		}
-		stage('Deploy the project'){
-			steps{
-				echo "Project is getting Deployed"
-			}
-		}
-	}
-	post {
-		success{
-			echo 'I succeeded!'
-		}
-		failure{
-			echo 'Failed....'
-		}
-	}
-}
+        stage(' Build the Docker Image') {
+            steps {
+               echo "Build the Docker Image for mvn project"
+               bat 'docker build -t mvnproj:1.0 .'
+            }
+        }
+         stage('Push Docker Image to DockerHub') {
+            steps {
+               echo "Push Docker Image to DockerHub for mvn project"
+                 withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'DOCKER_PASS')]) {
+                         bat '''
+   	        echo %DOCKER_PASS% | docker login -u siddharthsaparay --password-stdin
+                         docker tag mvnproj:1.0 siddharthsaparay/mymvnproj:latest
+                         docker push siddharthsaparay/mymvnproj:latest
+                         '''
+                  }
+            }
+        }
        
+        stage('Deploy the project using Container') {
+            steps {
+                echo "Running Java Application"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'I succeeded!'
+           
+        }
+        failure {
+            echo 'Failed........'
+        }
+    }
+}

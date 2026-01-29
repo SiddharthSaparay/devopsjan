@@ -1,101 +1,67 @@
 pipeline {
     agent any
-
-    environment {
-        // Maven full path (Windows)
-        MVN = '"C:\\apache-maven-3.9.12\\bin\\mvn.cmd"'
-
-        // Local image built in Jenkins
-        LOCAL_IMAGE    = "mvnproj:1.0"
-
-        // DockerHub push target
-        DOCKERHUB_USER  = "siddharthsaparay"
-        IMAGE_NAME      = "mymvnproj"
-        IMAGE_TAG       = "latest"
-
-        // Container name on Jenkins machine
-        CONTAINER_NAME  = "mymvnproj_container"
+     tools{
+         jdk 'Java17'
+         maven 'Maven'
     }
-
     stages {
-
         stage('Checkout Code') {
             steps {
-                echo "Pulling from GitHub repository"
-                git branch: 'main',
-                    credentialsId: 'github',
-                    url: 'https://github.com/SiddharthSaparay/devopsjan.git'
+               echo "Pulling from GITHUB repository"
+               git branch: 'main', credentialsId: 'mygithub', url: 'https://github.com/SiddharthSaparay/devopsjan.git'
             }
         }
-
-        stage('Tool Check') {
+         stage('Test the Project') {
             steps {
-                bat '%MVN% -version'
-                bat 'java -version'
-                bat 'docker version'
+               echo "Test my JAVA project"
+               bat 'mvn clean test' 
+            }
+              post {
+                  always {
+                         junit '**/target/surefire-reports/*.xml'
+                         echo 'Test Run succeeded!'          
+					}
+				}
+		}
+        stage('Build Project') {
+            steps {
+               echo "Building my JAVA project"
+               bat 'mvn clean package -DskipTests' 
             }
         }
-
-        stage('Test the Project') {
+        stage(' Build the Docker Image') {
             steps {
-                echo "Running tests"
-                bat '%MVN% clean test'
-            }
-            post {
-                always {
-                    junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
-                    echo 'Test stage finished!'
-                }
+               echo "Build the Docker Image for mvn project"
+               bat 'docker build -t mvnproj:1.0 .'
             }
         }
-
-        stage('Build Project (Jar)') {
+         stage('Push Docker Image to DockerHub') {
             steps {
-                echo "Building JAR"
-                bat '%MVN% clean package -DskipTests'
-                bat 'dir target\\*.jar'
+               echo "Push Docker Image to DockerHub for mvn project"
+                 withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'DOCKER_PASS')]) {
+                         bat '''
+   	        echo %DOCKER_PASS% | docker login -u siddharthsaparay --password-stdin
+                         docker tag mvnproj:1.0 siddharthsaparay/mymvnproj:latest
+                         docker push siddharthsaparay/mymvnproj:latest
+                         '''
+                  }
             }
         }
-
-        stage('Build Docker Image') {
+       
+        stage('Deploy the project using Container') {
             steps {
-                echo "Building Docker image"
-                bat "docker build -t %LOCAL_IMAGE% ."
-            }
-        }
-
-        stage('Push Docker Image to DockerHub') {
-            steps {
-                echo "Login + Tag + Push"
-                withCredentials([usernamePassword(credentialsId: 'docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat """
-                    echo %DOCKER_PASS% | docker login -u %DOCKERHUB_USER% --password-stdin
-                    if %ERRORLEVEL% NEQ 0 exit /b 1
-
-                    docker tag %LOCAL_IMAGE% %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%
-                    docker push %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%
-                    """
-                }
-            }
-        }
-
-        stage('Deploy using Container') {
-            steps {
-                echo "Running container"
-                bat """
-                docker rm -f %CONTAINER_NAME% 2>nul || exit /b 0
-                docker run -d --name %CONTAINER_NAME% %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%
-                docker ps
-                docker logs %CONTAINER_NAME%
-                """
+                echo "Running Java Application"
             }
         }
     }
 
     post {
-        success { echo 'Pipeline succeeded!' }
-        failure { echo 'Pipeline failed!' }
-        always  { echo 'Pipeline finished.' }
+        success {
+            echo 'I succeeded!'
+           
+        }
+        failure {
+            echo 'Failed........'
+        }
     }
 }
-

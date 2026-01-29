@@ -40,7 +40,7 @@ pipeline {
                echo "Push Docker Image to DockerHub for mvn project"
                  withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'DOCKER_PASS')]) {
                          bat '''
-   	        echo %DOCKER_PASS% | docker login -u siddharthsaparay --password-stdin
+   	        echo %DOCKER_PASS% | docker login -u saparaysiddharth@gmail.com --password-stdin
                          docker tag mvnproj:1.0 siddharthsaparay/mymvnproj:latest
                          docker push siddharthsaparay/mymvnproj:latest
                          '''

@@ -36,17 +36,20 @@ pipeline {
             }
         }
          stage('Push Docker Image to DockerHub') {
-            steps {
-               echo "Push Docker Image to DockerHub for mvn project"
-                 withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'DOCKER_PASS')]) {
-                         bat '''
-   	        echo %DOCKER_PASS% | docker login -u siddharthsaparay --password-stdin
-                         docker tag mvnproj:1.0 siddharthsaparay/mymvnproj:latest
-                         docker push siddharthsaparay/mymvnproj:latest
-                         '''
-                  }
-            }
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhubpass',
+                                          usernameVariable: 'DOCKER_USER',
+                                          passwordVariable: 'DOCKER_PASS')]) {
+            bat '''
+            docker logout
+            echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin
+            docker tag mvnproj:1.0 %DOCKER_USER%/myapp:latest
+            docker push %DOCKER_USER%/myapp:latest
+            '''
         }
+    }
+}
+       
        
         stage('Deploy the project using Container') {
             steps {

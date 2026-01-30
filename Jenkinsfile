@@ -1,11 +1,18 @@
 pipeline {
     agent any
+<<<<<<< HEAD
 
     tools {
         jdk 'Java17'
         maven 'Maven'
     }
 
+=======
+     tools{
+         jdk 'Java17'
+         maven 'Maven'
+    }
+>>>>>>> d5a29746328d0c33aed143369aa751ecf3c25ad6
     stages {
 
         stage('Checkout Code') {
@@ -16,6 +23,7 @@ pipeline {
                     url: 'https://github.com/SiddharthSaparay/devopsjan.git'
             }
         }
+<<<<<<< HEAD
 
         stage('Test the Project') {
             steps {
@@ -104,6 +112,55 @@ pipeline {
                         '''
                     }
                 }
+=======
+         stage('Test the Project') {
+            steps {
+               echo "Test my JAVA project"
+               bat 'mvn clean test' 
+            }
+              post {
+                  always {
+                         junit '**/target/surefire-reports/*.xml'
+                         echo 'Test Run succeeded!'          
+					}
+				}
+		}
+        stage('Build Project') {
+            steps {
+               echo "Building my JAVA project"
+               bat 'mvn clean package -DskipTests' 
+            }
+        }
+        stage(' Build the Docker Image') {
+            steps {
+               echo "Build the Docker Image for mvn project"
+               bat 'docker build -t mvnproj:1.0 .'
+            }
+        }
+         stage('Push Docker Image to DockerHub') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhubpass',
+                                          usernameVariable: 'DOCKER_USER',
+                                          passwordVariable: 'DOCKER_PASS')]) {
+            bat '''
+            docker logout
+            echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin
+            docker tag mvnproj:1.0 %DOCKER_USER%/myapp:latest
+            docker push %DOCKER_USER%/myapp:latest
+            '''
+        }
+    }
+}
+       
+       
+        stage('Deploy the project using Container') {
+            steps {
+                echo "Running Java Application"
+                bat '''
+	               docker rm -f myjavaappcont || exit 0
+	               docker run --name myjavaappcont siddharthsaparay/myapp:latest
+	            '''
+>>>>>>> d5a29746328d0c33aed143369aa751ecf3c25ad6
             }
         }
     }

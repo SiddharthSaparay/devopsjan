@@ -37,7 +37,7 @@ pipeline {
             }
         }
 
-        stage(' Build the Docker Image') {
+        stage('Build the Docker Image') {
             steps {
                 echo "Build the Docker Image for mvn project"
                 bat 'docker build -t mvnproj:1.0 .'
@@ -53,7 +53,7 @@ pipeline {
                 )]) {
                     bat '''
                         docker logout
-                        echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                         docker tag mvnproj:1.0 %DOCKER_USER%/myapp:latest
                         docker push %DOCKER_USER%/myapp:latest
                     '''
@@ -71,10 +71,10 @@ pipeline {
 
                     "C:\\Program Files\\Kubernetes\\Minikube\\minikube.exe" image load siddharthsaparay/myapp:latest
                     kubectl apply -f deployment.yaml
-                    sleep 20
+                    timeout /t 20
                     kubectl get pods
                     kubectl apply -f services.yaml
-                    sleep 10
+                    timeout /t 10
                     kubectl get services
                     "C:\\Program Files\\Kubernetes\\Minikube\\minikube.exe" image ls
                 '''
@@ -84,18 +84,18 @@ pipeline {
         stage('Parallel loading of services and Dashboard') {
             parallel {
 
-                stage('Run "C:\\Program Files\\Kubernetes\\Minikube\\minikube.exe" dashboard') {
+                stage('Run Minikube Dashboard') {
                     steps {
                         echo "Running minikube dashboard"
                         bat '''
-                        	"C:\\Program Files\\Kubernetes\\Minikube\\minikube.exe" addons enable metrics-server
+                            "C:\\Program Files\\Kubernetes\\Minikube\\minikube.exe" addons enable metrics-server
                             "C:\\Program Files\\Kubernetes\\Minikube\\minikube.exe" dashboard
                             echo "Dashboard is Running"
                         '''
                     }
                 }
 
-                stage('Run "C:\\Program Files\\Kubernetes\\Minikube\\minikube.exe" services') {
+                stage('Run Minikube Services') {
                     steps {
                         echo "Running minikube services"
                         bat '''
